@@ -40,9 +40,9 @@ int get_current_date(void){
 }
 
 // WORKS: TODO: seperate load for writing and reading? --yes
-int config_w(char *work_dir){
+FILE* config_w(char *work_dir){
     if (!work_dir){
-        return -1;
+        return NULL;
     }
 
     FILE *f;
@@ -50,12 +50,14 @@ int config_w(char *work_dir){
     fseek(f, 0, SEEK_END);
     if (ftell(f) == 0)
         initialize(f);
-    return 0;
+    return f;
 }
 
 int initialize(FILE *f){
     char* workspace = repo_name();
     fprintf(f, "%s\n", workspace);
+    fprintf(f,"%d ", get_current_date());
+    fprintf(f, "%ld", time(NULL));
     return 0;
 }
 
@@ -75,7 +77,7 @@ int main(int argc, char *argv[]) {
         strcat(commands, " ");
     }
     char *work_dir = get_working_dir();
-    config_w(work_dir);
+    FILE* f = config_w(work_dir);
 
     // Record start time
     time_t start_time = time(NULL);
@@ -101,6 +103,7 @@ int main(int argc, char *argv[]) {
         waitpid(pid, &status, 0);
 
         time_t end_time = time(NULL);
+        fprintf(f, " %ld", end_time);
         printf("Execution time: %ld seconds\n", end_time - start_time);
     }
 
