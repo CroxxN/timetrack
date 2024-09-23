@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS=-Wall -Wpedantic -Wextra -std=c99
+CFLAGS=-Wall -Wpedantic -Wextra
 LIBS=-lgit2
 
 timetrack: timetrack.c

@@ -1,9 +1,11 @@
+#include "timetrack.h"
 #include <git2/errors.h>
 #include <git2/global.h>
 #include <git2/repository.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<libgen.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -24,14 +26,36 @@ char* get_working_dir(void){
     return work_dir;
 }
 
+char* repo_name(void){
+    char *name = basename(get_working_dir());
+    return name;
+}
+
+// WORKS:
+int get_current_date(void){
+    time_t now = time(NULL);
+    struct tm* date = localtime(&now);
+    int formated_date = ((1900 + date->tm_year)*10000) + (date->tm_mon*100) + date->tm_mday;
+    return formated_date;
+}
+
 // WORKS: TODO: seperate load for writing and reading? --yes
-int load_config(char *work_dir){
+int config_w(char *work_dir){
     if (!work_dir){
         return -1;
     }
 
     FILE *f;
-    f = fopen(strcat(work_dir, ".timetrack"), "a");
+    f = fopen(strcat(work_dir, ".timetrack"), "a+");
+    fseek(f, 0, SEEK_END);
+    if (ftell(f) == 0)
+        initialize(f);
+    return 0;
+}
+
+int initialize(FILE *f){
+    char* workspace = repo_name();
+    fprintf(f, "%s\n", workspace);
     return 0;
 }
 
@@ -51,7 +75,7 @@ int main(int argc, char *argv[]) {
         strcat(commands, " ");
     }
     char *work_dir = get_working_dir();
-    load_config(work_dir);
+    config_w(work_dir);
 
     // Record start time
     time_t start_time = time(NULL);
