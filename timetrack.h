@@ -6,5 +6,6 @@ char* get_working_dir(void);
 int load_config_w(char *);
 int get_current_date(void);
 int initialize(FILE *);
+void stamp_file(FILE*);
 
 #endif

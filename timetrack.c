@@ -31,13 +31,6 @@ char* repo_name(void){
     return name;
 }
 
-// WORKS:
-int get_current_date(void){
-    time_t now = time(NULL);
-    struct tm* date = localtime(&now);
-    int formated_date = ((1900 + date->tm_year)*10000) + (date->tm_mon*100) + date->tm_mday;
-    return formated_date;
-}
 
 // WORKS: TODO: seperate load for writing and reading? --yes
 FILE* config_w(char *work_dir){
@@ -48,18 +41,28 @@ FILE* config_w(char *work_dir){
     FILE *f;
     f = fopen(strcat(work_dir, ".timetrack"), "a+");
     fseek(f, 0, SEEK_END);
-    if (ftell(f) == 0)
+    int size = ftell(f);
+    if (size == 0)
         initialize(f);
+    else
+        stamp_file(f);
+
     return f;
 }
+
 
 int initialize(FILE *f){
     char* workspace = repo_name();
     fprintf(f, "%s\n", workspace);
-    fprintf(f,"%d ", get_current_date());
     fprintf(f, "%ld", time(NULL));
     return 0;
 }
+
+void stamp_file(FILE* f){
+    time_t t = time(NULL);
+    fprintf(f, "%ld", t);
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -103,7 +106,7 @@ int main(int argc, char *argv[]) {
         waitpid(pid, &status, 0);
 
         time_t end_time = time(NULL);
-        fprintf(f, " %ld", end_time);
+        fprintf(f, " %ld\n", end_time);
         printf("Execution time: %ld seconds\n", end_time - start_time);
     }
 
