@@ -2,10 +2,17 @@
 #define TIMETRACK_H_
 
 #include <stdio.h>
-char* get_working_dir(void);
-int load_config_w(char *);
+
+typedef struct {
+  FILE *db;
+} DB;
+
+char *get_working_dir(void);
+char *repo_name(char *);
+int open_db(char *, DB *);
+int initialize(FILE *, char *);
+int stamp_db(DB *dbase, long, long);
+void diagnostics(void);
 int get_current_date(void);
-int initialize(FILE *);
-void stamp_file(FILE*);
 
 #endif
