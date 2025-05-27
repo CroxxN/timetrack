@@ -157,6 +157,13 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  // add current directory to the watch dog if `timetrack init`
+  if (!strcmp(argv[1], "init")) {
+    printf("Initialized\n");
+    // TODO: implement
+    return 0;
+  }
+
   // Record start time
   time_t start_time = time(NULL);
 

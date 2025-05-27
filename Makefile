@@ -8,8 +8,11 @@ timetrack: timetrack.c
 release: timetrack.c	
 	$(CC) timetrack.c $(CFLAGS) $(LIBS) -o timetrack
 
+daemon: timetrackd.c
+	$(CC) timetrackd.c $(CFLAGS)  -o timetrackd
+
 run: timetrack
 	./timetrack
 
 clean: timetrack
-	rm ./timetrack
+	rm ./timetrack ./timetrackd
