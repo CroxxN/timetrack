@@ -31,7 +31,7 @@ char *get_working_dir(void) {
   }
 
   // 12 extra bytes for ".timetrackdb", 1 more for the null terminator
-  char *work_dir = malloc(new_repo_size + 12 + 1);
+  char *work_dir = malloc(new_repo_size + 1);
   strncpy(work_dir, repo.ptr, new_repo_size);
   work_dir[new_repo_size] = '\0';
   return work_dir;
@@ -47,7 +47,15 @@ int open_db(char *work_dir, DB *database) {
     return -1;
   }
 
-  FILE *f = fopen(strcat(work_dir, ".timetrackdb"), "a+");
+  int work_dir_len = strlen(work_dir);
+  char *db_path = malloc(work_dir_len + 12 + 1);
+  strcpy(db_path, work_dir);
+  strcpy(db_path + work_dir_len, ".timetrackdb");
+  db_path[work_dir_len + 12] = '\0';
+
+  char *repo_name = get_repo_name(work_dir);
+
+  FILE *f = fopen(db_path, "a+");
   database->db = f;
 
   fseek(f, 0, SEEK_END);
@@ -56,7 +64,7 @@ int open_db(char *work_dir, DB *database) {
 
   if (size == 0) {
     // if the database if empty, initialize it with the name of the git repo
-    int status = initialize(f, work_dir);
+    int status = initialize(f, repo_name);
     if (status)
       return -1;
   }
@@ -64,18 +72,54 @@ int open_db(char *work_dir, DB *database) {
   return 0;
 }
 
-int initialize(FILE *file, char *workspace) {
-  if (workspace == NULL) {
+int initialize(FILE *file, char *repo_name) {
+  if (repo_name == NULL) {
     printf("Failed to discover git workspace");
     return -1;
   }
-  char *repo = get_repo_name(workspace);
-  fprintf(file, "%s\n", repo);
+  fprintf(file, "%s\n", repo_name);
   return 0;
 }
 
-int stamp_db(DB *dbase, long start_time, long end_time) {
-  return fprintf(dbase->db, "%ld %ld\n", start_time, end_time);
+int stamp_db(DB *dbase, char *process_name, struct tm start_time,
+             struct tm end_time) {
+  if (NULL == process_name)
+    return -1;
+
+  int error;
+
+  error = fprintf(dbase->db, "%s ", process_name);
+  if (error < 0)
+    return -1;
+
+  int st_year = start_time.tm_year + 1900;
+  int st_month = start_time.tm_mon + 1;
+  int st_day = start_time.tm_mday;
+
+  int st_hour = start_time.tm_hour;
+  int st_minute = start_time.tm_min;
+  int st_seconds = start_time.tm_sec;
+
+  error = fprintf(dbase->db, "%d-%02d-%02d %02d:%02d:%02d ", st_year, st_month,
+                  st_day, st_hour, st_minute, st_seconds);
+
+  if (error < 0)
+    return error;
+
+  int end_year = end_time.tm_year + 1900;
+  int end_month = end_time.tm_mon + 1;
+  int end_day = end_time.tm_mday;
+
+  int end_hour = end_time.tm_hour;
+  int end_minute = end_time.tm_min;
+  int end_seconds = end_time.tm_sec;
+
+  error = fprintf(dbase->db, "%d-%02d-%02d %02d:%02d:%02d\n", end_year,
+                  end_month, end_day, end_hour, end_minute, end_seconds);
+  if (error < 0)
+    return error;
+
+  return 0;
 }
 
 // TODO: implement diagnostics
@@ -120,15 +164,15 @@ int main(int argc, char *argv[]) {
 
   if (pid == -1) {
     perror("fork");
-    return 1;
+    return -1;
   }
 
   if (pid == 0) {
     // get the user's shell; makes this program shell agnostic
     char *user_shell = getenv("SHELL");
 
-    // "-i" forces an interactive shell such the configs of the shell are loaded
-    // up
+    // "-i" forces an interactive shell such that configs of the shell are
+    // loaded
     execl(user_shell, user_shell, "-i", "-c", commands, (char *)NULL);
 
     // If execl fails
@@ -141,10 +185,16 @@ int main(int argc, char *argv[]) {
   waitpid(pid, &status, 0);
 
   time_t end_time = time(NULL);
-  stamp_db(&database, start_time, end_time);
+
+  // to get the year, month, day, hour, minutes and seconds from `time_t`
+  struct tm local_start_tm = *localtime(&start_time);
+  struct tm local_end_tm = *localtime(&end_time);
+
+  stamp_db(&database, argv[1], local_start_tm, local_end_tm);
 
   printf("Execution time: %ld seconds\n", end_time - start_time);
 
+  // close the filestream
   fclose(database.db);
 
   // close libgit2
