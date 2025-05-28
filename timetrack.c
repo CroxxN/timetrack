@@ -205,12 +205,27 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  // TODO: implement pipe initialization using fork()
-  int fd;
+  // INFO: This hangs indefinitely if the daemon isn't running
+  // This is because open() call to a fifo fd is blocking, and
+  // waits untils there is someone on the other side to receive
+  // or write the data
+  int fd = initialize_daemon_pipe();
+
+  if (fd < 0)
+    return -1;
 
   // add current directory to the watch dog if `timetrack init`
   if (!strcmp(argv[1], "init")) {
-    update_path_to_wd(fd, 1, work_dir, strlen(work_dir));
+    int status = update_path_to_wd(fd, 1, work_dir, strlen(work_dir));
+    return status;
+  }
+
+  // remove current directory from the watch dog if `timetrack remove`
+  if (!strcmp(argv[1], "remove")) {
+    int status = update_path_to_wd(fd, 0, work_dir, strlen(work_dir));
+    if (status < 0)
+      return -1;
+
     return 0;
   }
 
@@ -232,6 +247,7 @@ int main(int argc, char *argv[]) {
     // loaded
     execl(user_shell, user_shell, "-i", "-c", commands, (char *)NULL);
 
+    // TODO: fix this
     // If execl fails
     perror("execl");
     // exit(EXIT_FAILURE);

@@ -53,7 +53,6 @@ int listen(int wd_fd) {
 
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
     handle_pipe_message(wd_fd, read_buf, n);
-    // TODO: add the directory in `read_buf` to the file watch dog
   }
   return 0;
 }
@@ -71,21 +70,29 @@ int initialize_watchdog(void) {
 }
 
 // TODO: handle inotify events
-int inotify_loop(void) { return 0; }
+int inotify_loop(int fd) {
+  // read(fd);
+  return 0;
+}
 
 int main(void) {
-  pid_t pid = fork();
 
-  if (pid == -1) {
+  int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
+
+  if (-1 == wd_fd)
+    return -1;
+
+  pid_t wd_pid = fork();
+  if (-1 == wd_pid) {
     perror("fork");
     return -1;
-  } else if (0 == pid) {
-    int wd_fd = initialize_watchdog();
 
-    if (wd_fd == -1)
-      return -1;
-
-    listen(wd_fd);
+  } else if (0 == wd_pid) {
+    int status = listen(wd_fd);
+    return status;
   }
+
+  inotify_loop(wd_fd);
+
   return 0;
 }
