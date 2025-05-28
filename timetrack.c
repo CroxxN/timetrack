@@ -1,16 +1,23 @@
 #include "timetrack.h"
+#include <fcntl.h>
 #include <git2.h>
 #include <git2/buffer.h>
 #include <git2/errors.h>
 #include <git2/global.h>
 #include <git2/repository.h>
 #include <libgen.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+
+#define BUF_SIZE 100
+#define FIFO_PATH "/tmp/timetrack"
+#define FIFO_MODE 0666
 
 char *get_working_dir(void) {
   git_buf repo = {0};
@@ -30,7 +37,7 @@ char *get_working_dir(void) {
     return NULL;
   }
 
-  // 12 extra bytes for ".timetrackdb", 1 more for the null terminator
+  // TODO: check if `repo.ptr` is null terminated
   char *work_dir = malloc(new_repo_size + 1);
   strncpy(work_dir, repo.ptr, new_repo_size);
   work_dir[new_repo_size] = '\0';
@@ -122,6 +129,47 @@ int stamp_db(DB *dbase, char *process_name, struct tm start_time,
   return 0;
 }
 
+int initialize_daemon_pipe(void) {
+  mkfifo(FIFO_PATH, FIFO_MODE);
+
+  int fd = open(FIFO_PATH, O_WRONLY);
+
+  return fd;
+}
+
+int daemon_send_message(int fd, uint8_t *buf, int buf_size) {
+  int status = write(fd, buf, buf_size);
+
+  if (status < 0)
+    return -1;
+
+  return 0;
+}
+
+int update_path_to_wd(int fd, uint8_t type, char *path, int path_len) {
+  if (NULL == path || path_len < 1)
+    return -1;
+
+  // 1 for add, 0 for delete
+  if (type < 0 || type > 1)
+    return -1;
+
+  int new_size = path_len + 5;
+
+  uint8_t *buf = malloc(new_size);
+
+  if (NULL == buf)
+    return -1;
+
+  buf[0] = type;
+  memcpy(buf + 1, &path_len, sizeof(int));
+  memcpy(buf + 5, path, path_len);
+
+  int status = daemon_send_message(fd, buf, new_size);
+
+  return status;
+}
+
 // TODO: implement diagnostics
 void diagnostics(void) {}
 
@@ -157,10 +205,12 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  // TODO: implement pipe initialization using fork()
+  int fd;
+
   // add current directory to the watch dog if `timetrack init`
   if (!strcmp(argv[1], "init")) {
-    printf("Initialized\n");
-    // TODO: implement
+    update_path_to_wd(fd, 1, work_dir, strlen(work_dir));
     return 0;
   }
 

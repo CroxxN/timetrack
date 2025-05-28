@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -8,18 +9,35 @@
 
 #define BUF_SIZE 100
 #define FIFO_PATH "/tmp/timetrack"
-#define FIFO_MODE 1337
+#define FIFO_MODE 0666
 
-struct Watchdog {
-  // The file descriptor associated with the current inotify instance
-  int inotify;
+int handle_pipe_message(int fd, char *buf, int size) {
+  unsigned char type = buf[0];
+  int path_size;
 
-  // flags with which the inotify instance is created
-  int flags;
-};
+  memcpy(&path_size, buf + 1, sizeof(int));
 
-// clean before exit
-void clean(struct Watchdog *wd) { free(wd); }
+  buf += 5; // now at the start of the path name
+
+  char *path_name = malloc(path_size + 1);
+
+  if (NULL == path_name)
+    return -1;
+
+  strncpy(path_name, buf, path_size);
+  path_name[path_size] = '\0';
+
+  // TODO: add masks
+  uint32_t mask = 0x0;
+
+  if (type == 1) {
+    int status = inotify_add_watch(fd, path_name, mask);
+    return status;
+  } else if (type == 0) {
+    // TODO: implement removing
+  }
+  return 0;
+}
 
 int listen(int wd_fd) {
   char read_buf[BUF_SIZE];
@@ -34,6 +52,7 @@ int listen(int wd_fd) {
   int n;
 
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
+    handle_pipe_message(wd_fd, read_buf, n);
     // TODO: add the directory in `read_buf` to the file watch dog
   }
   return 0;
@@ -41,9 +60,7 @@ int listen(int wd_fd) {
 
 // using inotify
 int initialize_watchdog(void) {
-
-  // inotify
-  int inotify_fd = inotify_init();
+  int inotify_fd = inotify_init(); // inotify
 
   if (inotify_fd == -1) {
     perror("Failed to create a inotify instance");
@@ -53,11 +70,8 @@ int initialize_watchdog(void) {
   return inotify_fd;
 }
 
-// handle inotify events
-int inotify_loop(void) {
-  // todo
-  return 0;
-}
+// TODO: handle inotify events
+int inotify_loop(void) { return 0; }
 
 int main(void) {
   pid_t pid = fork();
