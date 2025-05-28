@@ -51,6 +51,7 @@ int listen(int wd_fd) {
 
   int n;
 
+  // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
     handle_pipe_message(wd_fd, read_buf, n);
   }

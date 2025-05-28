@@ -1,4 +1,5 @@
 #include "timetrack.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <git2.h>
 #include <git2/buffer.h>
@@ -132,7 +133,17 @@ int stamp_db(DB *dbase, char *process_name, struct tm start_time,
 int initialize_daemon_pipe(void) {
   mkfifo(FIFO_PATH, FIFO_MODE);
 
-  int fd = open(FIFO_PATH, O_WRONLY);
+  // NOTE: Making this nonblocking let's use operate without a daemon attached.
+  // if the error is a ENXIO, we can continue like normal, with the
+  // expectation that the user doesn't want to use the daemon
+  //
+  // TODO: Also, maybe add a --nodaemon option to indicate that.
+  //
+  // NOTE: all subsequence actions of the FIFO becomes non-blocking after this
+  int fd = open(FIFO_PATH, O_WRONLY | O_NONBLOCK);
+
+  if (-1 == fd && ENXIO == errno)
+    return 0;
 
   return fd;
 }
@@ -216,12 +227,24 @@ int main(int argc, char *argv[]) {
 
   // add current directory to the watch dog if `timetrack init`
   if (!strcmp(argv[1], "init")) {
+    if (0 == fd) {
+      printf("Tracktime daemon is not running. Please run the daemon and try "
+             "again.\n");
+      return -1;
+    }
     int status = update_path_to_wd(fd, 1, work_dir, strlen(work_dir));
     return status;
   }
 
   // remove current directory from the watch dog if `timetrack remove`
   if (!strcmp(argv[1], "remove")) {
+
+    if (0 == fd) {
+      printf("Tracktime daemon is not running. Please run the daemon and try "
+             "again.\n");
+      return -1;
+    }
+
     int status = update_path_to_wd(fd, 0, work_dir, strlen(work_dir));
     if (status < 0)
       return -1;
