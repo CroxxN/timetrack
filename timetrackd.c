@@ -70,9 +70,20 @@ int initialize_watchdog(void) {
   return inotify_fd;
 }
 
-// TODO: handle inotify events
 int inotify_loop(int fd) {
-  // read(fd);
+  struct inotify_event ievnt;
+  // we allocate an additional 100 bytes because the size of
+  // each inotify event is the size of the struct + the size of the name
+  // field
+  // See more: https://man7.org/linux/man-pages/man7/inotify.7.html
+
+  int event_size = sizeof(struct inotify_event) + 100;
+
+  int n;
+
+  while ((n = read(fd, &ievnt, sizeof(struct inotify_event))) > 0) {
+    // TODO: implement performing actions on the received events
+  }
   return 0;
 }
 
