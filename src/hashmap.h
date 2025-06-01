@@ -38,7 +38,7 @@ uint32_t hashmap_hash(int key, uint32_t capacity) {
   uint32_t hash = FNV_OFFSET_BASIS;
   hash = hash ^ key;
   hash = hash * FNV_PRIME;
-  return hash;
+  return hash % capacity;
 }
 
 int hashmap_update_filled(struct Table *table, int index) {
