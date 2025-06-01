@@ -1,3 +1,5 @@
+// A chaining hashmap implementation using the FNV-1a algorithm
+
 #ifndef HASHMAP_H
 
 #define HASHMAP_H
@@ -6,13 +8,19 @@
 #include <stdlib.h>
 
 // 32 because it's a power of 2
-#define TABLE_CAPACITY 32
+#define TABLE_CAPACITY (32)
+
+// FNV-1a constants
+#define FNV_PRIME (16777619)
+#define FNV_OFFSET_BASIS (2166136261)
 
 // We implement the hashmap for a integer key
 // and string value only
 struct Node {
   int key;
   char *val;
+  // TODO: make use of this
+  struct Node *next;
 };
 
 // container to hold (key, value) pairs
@@ -24,9 +32,14 @@ struct Table {
   struct Node *inner; // array of nodes
 };
 
-// INTERNAL ONLY
-// TODO: Implement
-uint32_t hashmap_hash(int key, uint32_t capacity) { return key % capacity; }
+// FNV-1a (Alternate) hashing algorithm
+// Learn more: http://www.isthe.com/chongo/tech/comp/fnv/#FNV-1a
+uint32_t hashmap_hash(int key, uint32_t capacity) {
+  uint32_t hash = FNV_OFFSET_BASIS;
+  hash = hash ^ key;
+  hash = hash * FNV_PRIME;
+  return hash;
+}
 
 int hashmap_update_filled(struct Table *table, int index) {
   uint32_t filled = table->filled;
