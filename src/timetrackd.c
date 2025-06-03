@@ -14,6 +14,9 @@
 #define FIFO_PATH "/tmp/timetrack"
 #define FIFO_MODE 0666
 
+// TODO: wrap this in a mutex
+struct Table *_map;
+
 int handle_pipe_message(int fd, char *buf, int size, struct Table *map) {
   unsigned char type = buf[0];
   if (type < 0 || type > 1)
@@ -43,6 +46,7 @@ int handle_pipe_message(int fd, char *buf, int size, struct Table *map) {
       return -1;
   } else if (type == 0) {
     // TODO: implement removing
+    // int status = inotify_rm_watch(int fd, int wd);
   }
   return 0;
 }

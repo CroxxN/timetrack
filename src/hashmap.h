@@ -106,7 +106,7 @@ char *hashmap_get(struct Table *table, int key) {
 }
 
 char *hashmap_remove(struct Table *table, int key) {
-  char *val;
+  char *val = NULL;
 
   int index = hashmap_hash(key, table->capacity);
 
@@ -115,7 +115,11 @@ char *hashmap_remove(struct Table *table, int key) {
 
   if (table->inner[index]->key == key) {
     val = table->inner[index]->val;
-    table->inner[index] = table->inner[index]->next;
+    if (!table->inner[index]->next) {
+      free(table->inner[index]);
+      table->inner[index] = (struct Node *)calloc(1, sizeof(struct Node));
+    } else
+      *table->inner[index] = *table->inner[index]->next;
   } else {
 
     struct Node *iter = table->inner[index];
@@ -125,7 +129,8 @@ char *hashmap_remove(struct Table *table, int key) {
       if (iter->key == key) {
         val = iter->val;
         prev->next = iter->next;
-        // TODO: free()
+        free(iter);
+        break;
       }
       prev = iter;
       iter = iter->next;
