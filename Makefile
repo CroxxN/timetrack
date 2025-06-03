@@ -11,6 +11,10 @@ release: ./src/timetrack.c
 daemon: ./src/timetrackd.c
 	$(CC) ./src/timetrackd.c $(CFLAGS)  -o timetrackd
 
+# TODO: one test for all; use cli to indicate what to test
+test: ./tests/hashmap.c
+	$(CC) ./tests/hashmap.c -o ./tests/hashmap && ./tests/hashmap
+
 run: timetrack
 	./timetrack
 

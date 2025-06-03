@@ -4,7 +4,7 @@
 
 #define HASHMAP_H
 
-#include <cstdint>
+#include <stdint.h>
 #include <stdlib.h>
 
 // 32 because it's a power of 2
@@ -25,10 +25,8 @@ struct Node {
 
 // container to hold (key, value) pairs
 struct Table {
-  uint32_t len;      // number of elements in the table
-  uint32_t capacity; // maximum capacity allowed by the table
-  uint32_t
-      filled; // bitfield to track positions are filled in the table by nodes
+  uint32_t len;       // number of elements in the table
+  uint32_t capacity;  // maximum capacity allowed by the table
   struct Node *inner; // array of nodes
 };
 
@@ -41,14 +39,6 @@ uint32_t hashmap_hash(int key, uint32_t capacity) {
   return hash % capacity;
 }
 
-int hashmap_update_filled(struct Table *table, int index) {
-  uint32_t filled = table->filled;
-  filled = filled ^ (1 << index);
-  table->filled = filled;
-
-  return (filled >> index);
-}
-
 struct Table *hashmap() {
   struct Table *map = (struct Table *)malloc(sizeof(struct Table));
 
@@ -57,13 +47,13 @@ struct Table *hashmap() {
 
   map->len = 0;
   map->capacity = TABLE_CAPACITY;
-  map->filled = 0;
 
-  map->inner = (struct Node *)malloc(sizeof(struct Node) * TABLE_CAPACITY);
+  map->inner = (struct Node *)calloc(TABLE_CAPACITY, sizeof(struct Node));
 
   return map;
 }
 
+// TODO: use chaining
 int hashmap_insert(struct Table *table, int key, char *value) {
   if (NULL == value)
     return -1;
@@ -75,15 +65,23 @@ int hashmap_insert(struct Table *table, int key, char *value) {
   // hash the keys to get an index into our cotainer
   int index = hashmap_hash(key, table->capacity);
 
-  table->inner[index] = *temp;
+  // if (0 != (table->inner + index)) {
+  //   struct Node *iter = table->inner;
+  //   while (iter->next) {
+  //     iter = iter->next;
+  //   }
+  //   iter->next = temp;
 
-  // mark that position as filled in our bitfield
-  hashmap_update_filled(table, index);
+  //   return 0;
+  // }
+
+  table->inner[index] = *temp;
+  table->len++;
 
   return 0;
 }
 
-// TODO: make use of the bitfield
+// TODO: use chaining to get the val incase collision
 char *hashmap_get(struct Table *table, int key) {
   int index = hashmap_hash(key, table->capacity);
 
@@ -97,15 +95,14 @@ char *hashmap_get(struct Table *table, int key) {
   return table->inner[index].val;
 }
 
+// TODO: use chaining
 char *hashmap_remove(struct Table *table, int key) {
   char *val = hashmap_get(table, key);
 
   int index = hashmap_hash(key, table->capacity);
 
   free(table->inner + index);
-
-  hashmap_update_filled(table, index); // update the position in the bitfield
-
+  table->len--;
   return val;
 }
 

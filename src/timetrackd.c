@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,12 +8,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "hashmap.h"
+
 #define BUF_SIZE 100
 #define FIFO_PATH "/tmp/timetrack"
 #define FIFO_MODE 0666
 
-int handle_pipe_message(int fd, char *buf, int size) {
+int handle_pipe_message(int fd, char *buf, int size, struct Table *map) {
   unsigned char type = buf[0];
+  if (type < 0 || type > 1)
+    return -1;
   int path_size;
 
   memcpy(&path_size, buf + 1, sizeof(int));
@@ -31,8 +36,11 @@ int handle_pipe_message(int fd, char *buf, int size) {
   uint32_t mask = 0x0;
 
   if (type == 1) {
-    int status = inotify_add_watch(fd, path_name, mask);
-    return status;
+    int wd = inotify_add_watch(fd, path_name, mask);
+    // TODO: add error checking
+    int status = hashmap_insert(map, wd, path_name);
+    if (-1 == status)
+      return -1;
   } else if (type == 0) {
     // TODO: implement removing
   }
@@ -45,6 +53,8 @@ int listen(int wd_fd) {
   mkfifo(FIFO_PATH, FIFO_MODE);
   int fd;
 
+  struct Table *t = hashmap();
+
   if ((fd = open(FIFO_PATH, O_RDONLY)) < 0) {
     return -1;
   }
@@ -53,7 +63,7 @@ int listen(int wd_fd) {
 
   // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
-    handle_pipe_message(wd_fd, read_buf, n);
+    handle_pipe_message(wd_fd, read_buf, n, t);
   }
   return 0;
 }
