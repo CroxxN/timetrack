@@ -1,5 +1,6 @@
 #include "../src/hashmap.h"
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 void insert_get() {
@@ -27,6 +28,10 @@ void insert_get() {
   assert(strcmp(res3, "When") == 0);
 
   assert(strcmp(res2, "Hello") != 0);
+
+  printf("%s\n", res1);
+  printf("%s\n", res2);
+  printf("%s\n", res3);
 
   return;
 }

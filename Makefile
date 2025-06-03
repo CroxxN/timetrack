@@ -13,7 +13,7 @@ daemon: ./src/timetrackd.c
 
 # TODO: one test for all; use cli to indicate what to test
 test: ./tests/hashmap.c
-	$(CC) ./tests/hashmap.c -o ./tests/hashmap && ./tests/hashmap
+	$(CC) ./tests/hashmap.c -o ./tests/hashmap && ./tests/hashmap && rm ./tests/hashmap
 
 run: timetrack
 	./timetrack
