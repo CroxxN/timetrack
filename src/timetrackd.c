@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <linux/limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,10 +15,11 @@
 #define FIFO_PATH "/tmp/timetrack"
 #define FIFO_MODE 0666
 
-// TODO: wrap this in a mutex
-struct Table *_map;
+struct Table *map;
+// global mutex lock
+pthread_mutex_t tex;
 
-int handle_pipe_message(int fd, char *buf, int size, struct Table *map) {
+int handle_pipe_message(int fd, char *buf, int size) {
   unsigned char type = buf[0];
   if (type < 0 || type > 1)
     return -1;
@@ -41,7 +43,9 @@ int handle_pipe_message(int fd, char *buf, int size, struct Table *map) {
   if (type == 1) {
     int wd = inotify_add_watch(fd, path_name, mask);
     // TODO: add error checking
+    pthread_mutex_lock(&tex);
     int status = hashmap_insert(map, wd, path_name);
+    pthread_mutex_unlock(&tex);
     if (-1 == status)
       return -1;
   } else if (type == 0) {
@@ -57,8 +61,6 @@ int listen(int wd_fd) {
   mkfifo(FIFO_PATH, FIFO_MODE);
   int fd;
 
-  struct Table *t = hashmap();
-
   if ((fd = open(FIFO_PATH, O_RDONLY)) < 0) {
     return -1;
   }
@@ -67,7 +69,7 @@ int listen(int wd_fd) {
 
   // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
-    handle_pipe_message(wd_fd, read_buf, n, t);
+    handle_pipe_message(wd_fd, read_buf, n);
   }
   return 0;
 }
@@ -97,6 +99,13 @@ int inotify_loop(int fd) {
 
   while ((n = read(fd, &ievnt, sizeof(struct inotify_event))) > 0) {
     // TODO: implement performing actions on the received events
+    int wd = ievnt.wd;
+    pthread_mutex_lock(&tex);
+    char *pathname = hashmap_get(map, wd);
+    pthread_mutex_unlock(&tex);
+
+    if (NULL == pathname)
+      return -1;
   }
   return 0;
 }
@@ -104,6 +113,8 @@ int inotify_loop(int fd) {
 int main(void) {
 
   int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
+  map = hashmap();
+  pthread_mutex_init(&tex, NULL);
 
   if (-1 == wd_fd)
     return -1;
@@ -119,6 +130,8 @@ int main(void) {
   }
 
   inotify_loop(wd_fd);
+
+  pthread_mutex_destroy(&tex);
 
   return 0;
 }
