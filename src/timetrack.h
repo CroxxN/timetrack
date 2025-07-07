@@ -13,5 +13,6 @@ int open_db(char *, DB *);
 int initialize(FILE *, char *);
 void diagnostics(void);
 int get_current_date(void);
+void logging(char *, ...);
 
 #endif

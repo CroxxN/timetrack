@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,12 @@
 struct Table *map;
 // global mutex lock
 pthread_mutex_t tex;
+
+// TODO: implement
+void logging(char *s, ...) {
+  va_list v;
+  va_start(v, s);
+}
 
 int handle_pipe_message(int fd, char *buf, int size) {
   unsigned char type = buf[0];
@@ -86,6 +93,35 @@ int initialize_watchdog(void) {
   return inotify_fd;
 }
 
+// TODO: Implement
+int watchdog_act(struct inotify_event *event) {
+  // --------
+  // There are three inotify events are fundamental to timetrack
+  // IN_OPEN: This event is triggered when a file is opened, whether for
+  // reading, writing or executing is not specified;
+  // --------
+  // We use two other events
+  // types with IN_OPEN to determine if the user actually edited the file and if
+  // so, for how long
+  // --------
+  // IN_CLOSE_WRITE: This event is triggered when a file opened
+  // for writing is close. Paired with IN_OPEN, this event type will be used to
+  // filter files opened for writing from files that were not for files returned
+  // by IN_OPEN;
+  // --------
+  // IN_CLOSE_NOWRITE: This even is triggered when a file opened for any OTHER
+  // purpose than writing is closed. This event is used to filter files returned
+  // by IN_OPEN that we can ignore.
+  // --------
+  // Other events types that are, though as a supplement, still used are:
+  // IN_CREATE
+  // IN_DELETE
+  // IN_MODIFY
+  // --------
+
+  return 0;
+}
+
 int inotify_loop(int fd) {
   struct inotify_event ievnt;
   // we allocate an additional 100 bytes because the size of
@@ -104,8 +140,11 @@ int inotify_loop(int fd) {
     char *pathname = hashmap_get(map, wd);
     pthread_mutex_unlock(&tex);
 
-    if (NULL == pathname)
-      return -1;
+    int status = watchdog_act(&ievnt);
+
+    // TODO: add logging
+    if (0 > status)
+      continue;
   }
   return 0;
 }
