@@ -38,7 +38,7 @@ uint32_t hashmap_hash(int key, uint32_t capacity) {
   return hash % capacity;
 }
 
-struct Table *hashmap() {
+struct Table *hashmap(void) {
   struct Table *map = (struct Table *)malloc(sizeof(struct Table));
 
   if (NULL == map)
