@@ -105,7 +105,7 @@ int listen(int wd_fd) {
 
   // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
-    logging(n + 9, LOG_INFO, "[INFO]: %s", read_buf);
+    logging(n, LOG_INFO, "%s", read_buf);
     if (-1 == handle_pipe_message(wd_fd, read_buf, n)) {
       char *log_str = "Invalid Pipe Message. No Command Executed.";
       logging(strlen(log_str), LOG_ERROR, log_str);
@@ -203,9 +203,14 @@ int main(void) {
     return status;
   }
 
-  inotify_loop(wd_fd);
-
-  pthread_mutex_destroy(&tex);
+  pid_t inotify_pid = fork();
+  if (-1 == inotify_init()) {
+    perror("fork");
+    return -1;
+  } else if (0 == inotify_pid) {
+    inotify_loop(wd_fd);
+    pthread_mutex_destroy(&tex);
+  }
 
   return 0;
 }
