@@ -1,9 +1,9 @@
 # `timetrack`
 
 >[!WARNING]
-> Under development.
+> WIP. Under development.
 
-`timetrack` is a utility to log file changes---particularly `file open` and `file close` and derive meaning usage statistics.
+`timetrack` is a utility to keep track of file changes---particularly `file open` and `file close` and derive meaning usage statistics.
 
 ### Features
 
