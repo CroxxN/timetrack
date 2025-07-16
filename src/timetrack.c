@@ -16,6 +16,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "tui.h"
+
 #define BUF_SIZE 100
 #define FIFO_PATH "/tmp/timetrack"
 #define FIFO_MODE 0666
