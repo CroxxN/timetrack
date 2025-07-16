@@ -20,20 +20,49 @@ struct Table *map;
 // global mutex lock
 pthread_mutex_t tex;
 
-// TODO: implement
-void logging(char *s, ...) {
+// Global Logs
+FILE *TIMETRACK_LOG = NULL;
+
+// LOGGING:
+typedef enum { LOG_INFO, LOG_WARN, LOG_ERROR } LOG_TYPE;
+// NOTE: We should probably be careful about whether `s` is null-terminated or
+// not.
+// TODO: Timestamp log messages
+void logging(int size, LOG_TYPE ltype, char *s, ...) {
+  if (NULL == TIMETRACK_LOG)
+    return;
+
+  char log_buffer[size];
+
   va_list v;
   va_start(v, s);
+  int status = vsnprintf(log_buffer, size, s, v);
+  va_end(v);
+  if (0 > status)
+    fprintf(TIMETRACK_LOG, "FAILED TO LOG PREVIOUS MESSAGE\n");
+
+  switch (ltype) {
+  case LOG_INFO:
+    fprintf(TIMETRACK_LOG, "[INFO]: %s\n", log_buffer);
+    break;
+  case LOG_WARN:
+    fprintf(TIMETRACK_LOG, "[WARN]: %s\n", log_buffer);
+    break;
+  case LOG_ERROR:
+    fprintf(TIMETRACK_LOG, "[ERROR]: %s\n", log_buffer);
+    break;
+  }
+  return;
 }
 
 int handle_pipe_message(int fd, char *buf, int size) {
   unsigned char type = buf[0];
   if (type < 0 || type > 1)
     return -1;
-  int path_size;
+  char path_size_c[4];
 
-  memcpy(&path_size, buf + 1, sizeof(int));
-
+  memcpy(&path_size_c, buf + 1, sizeof(int));
+  int path_size = atoi(path_size_c);
   buf += 5; // now at the start of the path name
 
   char *path_name = malloc(path_size + 1);
@@ -76,7 +105,11 @@ int listen(int wd_fd) {
 
   // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
-    handle_pipe_message(wd_fd, read_buf, n);
+    logging(n + 9, LOG_INFO, "[INFO]: %s", read_buf);
+    if (-1 == handle_pipe_message(wd_fd, read_buf, n)) {
+      char *log_str = "Invalid Pipe Message. No Command Executed.";
+      logging(strlen(log_str), LOG_ERROR, log_str);
+    }
   }
   return 0;
 }
@@ -150,6 +183,8 @@ int inotify_loop(int fd) {
 }
 
 int main(void) {
+
+  TIMETRACK_LOG = fopen(".TIMETRACKLOG", "a");
 
   int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
   map = hashmap();
