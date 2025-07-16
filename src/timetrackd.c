@@ -27,29 +27,34 @@ FILE *TIMETRACK_LOG = NULL;
 typedef enum { LOG_INFO, LOG_WARN, LOG_ERROR } LOG_TYPE;
 // NOTE: We should probably be careful about whether `s` is null-terminated or
 // not.
-// TODO: Timestamp log messages
-void logging(int size, LOG_TYPE ltype, char *s, ...) {
+void logging(LOG_TYPE ltype, char *s, ...) {
   if (NULL == TIMETRACK_LOG)
     return;
 
+  time_t ts = time(NULL);
+  struct tm *tsinfo = localtime(&ts);
+  char *proper_time = asctime(tsinfo);
+
+  int size = strlen(s);
   char log_buffer[size];
 
   va_list v;
   va_start(v, s);
-  int status = vsnprintf(log_buffer, size, s, v);
+  int status = vsnprintf(log_buffer, 100, s, v);
   va_end(v);
+
   if (0 > status)
     fprintf(TIMETRACK_LOG, "FAILED TO LOG PREVIOUS MESSAGE\n");
 
   switch (ltype) {
   case LOG_INFO:
-    fprintf(TIMETRACK_LOG, "[INFO]: %s\n", log_buffer);
+    fprintf(TIMETRACK_LOG, "%s [INFO]: %s\n", proper_time, log_buffer);
     break;
   case LOG_WARN:
-    fprintf(TIMETRACK_LOG, "[WARN]: %s\n", log_buffer);
+    fprintf(TIMETRACK_LOG, "%s [WARN]: %s\n", proper_time, log_buffer);
     break;
   case LOG_ERROR:
-    fprintf(TIMETRACK_LOG, "[ERROR]: %s\n", log_buffer);
+    fprintf(TIMETRACK_LOG, "%s [ERROR]: %s\n", proper_time, log_buffer);
     break;
   }
   return;
@@ -105,10 +110,10 @@ int listen(int wd_fd) {
 
   // read is blocking so this waits until there is data to read
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
-    logging(n, LOG_INFO, "%s", read_buf);
+    logging(LOG_INFO, "%s", read_buf);
     if (-1 == handle_pipe_message(wd_fd, read_buf, n)) {
       char *log_str = "Invalid Pipe Message. No Command Executed.";
-      logging(strlen(log_str), LOG_ERROR, log_str);
+      logging(LOG_ERROR, log_str);
     }
   }
   return 0;
@@ -126,8 +131,8 @@ int initialize_watchdog(void) {
   return inotify_fd;
 }
 
-// TODO: Implement
-int watchdog_act(struct inotify_event *event) {
+// TODO: implement performing actions on the received events
+int watchdog_act(struct inotify_event *event, char *path) {
   // --------
   // There are three inotify events are fundamental to timetrack
   // IN_OPEN: This event is triggered when a file is opened, whether for
@@ -142,7 +147,7 @@ int watchdog_act(struct inotify_event *event) {
   // filter files opened for writing from files that were not for files returned
   // by IN_OPEN;
   // --------
-  // IN_CLOSE_NOWRITE: This even is triggered when a file opened for any OTHER
+  // IN_CLOSE_NOWRITE: This event is triggered when a file opened for any OTHER
   // purpose than writing is closed. This event is used to filter files returned
   // by IN_OPEN that we can ignore.
   // --------
@@ -167,17 +172,15 @@ int inotify_loop(int fd) {
   int n;
 
   while ((n = read(fd, &ievnt, sizeof(struct inotify_event))) > 0) {
-    // TODO: implement performing actions on the received events
     int wd = ievnt.wd;
     pthread_mutex_lock(&tex);
     char *pathname = hashmap_get(map, wd);
     pthread_mutex_unlock(&tex);
 
-    int status = watchdog_act(&ievnt);
+    int status = watchdog_act(&ievnt, pathname);
 
-    // TODO: add logging
     if (0 > status)
-      continue;
+      logging(LOG_ERROR, "Watchdog didn't act. Status: %d", status);
   }
   return 0;
 }
