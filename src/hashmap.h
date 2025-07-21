@@ -17,7 +17,7 @@
 // We implement the hashmap for a integer key
 // and string value only
 struct Node {
-  int key;
+  uint32_t key;
   char *val;
   struct Node *next;
 };

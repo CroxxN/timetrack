@@ -164,7 +164,8 @@ int watchdog_act(struct inotify_event *event, char *path) {
   // IN_DELETE
   // IN_MODIFY
   // --------
-
+  (void)event;
+  (void)path;
   return 0;
 }
 
