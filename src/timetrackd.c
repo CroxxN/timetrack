@@ -92,9 +92,14 @@ int handle_pipe_message(int fd, char *buf, int size) {
     pthread_mutex_unlock(&tex);
     if (-1 == status)
       return -1;
+    logging(LOG_ERROR, "Added path '%s' to watchdog", path_name);
   } else if (type == 0) {
     // TODO: implement removing
     // int status = inotify_rm_watch(int fd, int wd);
+    logging(LOG_ERROR, "Removed path '%s' from watchdog", path_name);
+  } else {
+    logging(LOG_ERROR, "Invalid action type: %d", type);
+    return -1;
   }
   return 0;
 }
