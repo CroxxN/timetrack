@@ -1,3 +1,4 @@
+#include <asm-generic/errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <pthread.h>
@@ -83,8 +84,10 @@ int handle_pipe_message(int fd, char *buf, int size) {
 
   if (type == 1) {
     int wd = inotify_add_watch(fd, path_name, mask);
-    // TODO: add error checking
-    pthread_mutex_lock(&tex);
+    if (EDEADLK == pthread_mutex_lock(&tex)) {
+      logging(LOG_ERROR, "Deadlock detected. Operation failed.");
+      return -1;
+    }
     int status = hashmap_insert(map, wd, path_name);
     pthread_mutex_unlock(&tex);
     if (-1 == status)
@@ -191,7 +194,21 @@ int main(void) {
 
   int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
   map = hashmap();
-  pthread_mutex_init(&tex, NULL);
+
+  pthread_mutexattr_t tex_attr;
+  pthread_mutexattr_init(&tex_attr);
+
+  if (pthread_mutexattr_settype(&tex_attr, PTHREAD_MUTEX_ERRORCHECK)) {
+    logging(LOG_ERROR, "Failed to initialize mutex attribute. Quitting.");
+    return -1;
+  }
+
+  if (pthread_mutex_init(&tex, &tex_attr)) {
+    logging(LOG_ERROR, "Failed to initialize mutex. Quitting.");
+    return -1;
+  }
+
+  pthread_mutexattr_destroy(&tex_attr);
 
   if (-1 == wd_fd)
     return -1;
