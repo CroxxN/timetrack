@@ -31,10 +31,14 @@ struct Table {
 
 // FNV-1a (Alternate) hashing algorithm
 // Learn more: http://www.isthe.com/chongo/tech/comp/fnv/#FNV-1a
-uint32_t hashmap_hash(int key, uint32_t capacity) {
+uint32_t hashmap_hash(uint32_t key, uint32_t capacity) {
   uint32_t hash = FNV_OFFSET_BASIS;
-  hash = hash ^ key;
-  hash = hash * FNV_PRIME;
+  int octet;
+  for (int i = 0; i < 4; i++) {
+    octet = (key >> (8 * i)) & 0xFF;
+    hash = hash ^ octet;
+    hash = hash * FNV_PRIME;
+  }
   return hash % capacity;
 }
 
@@ -56,7 +60,7 @@ struct Table *hashmap(void) {
   return map;
 }
 
-int hashmap_insert(struct Table *table, int key, char *value) {
+int hashmap_insert(struct Table *table, uint32_t key, char *value) {
   if (NULL == value)
     return -1;
 
@@ -85,7 +89,7 @@ int hashmap_insert(struct Table *table, int key, char *value) {
   return 0;
 }
 
-char *hashmap_get(struct Table *table, int key) {
+char *hashmap_get(struct Table *table, uint32_t key) {
   int index = hashmap_hash(key, table->capacity);
 
   if (NULL == table->inner[index])
@@ -105,7 +109,7 @@ char *hashmap_get(struct Table *table, int key) {
   return table->inner[index]->val;
 }
 
-char *hashmap_remove(struct Table *table, int key) {
+char *hashmap_remove(struct Table *table, uint32_t key) {
   char *val = NULL;
 
   int index = hashmap_hash(key, table->capacity);
