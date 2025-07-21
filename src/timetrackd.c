@@ -120,7 +120,7 @@ int listen(int wd_fd) {
   while ((n = read(fd, read_buf, BUF_SIZE)) > 0) {
     logging(LOG_INFO, "%s", read_buf);
     if (-1 == handle_pipe_message(wd_fd, read_buf, n)) {
-      char *log_str = "Invalid Pipe Message. No Command Executed.";
+      char *log_str = "Internal Error. No Command Executed.";
       logging(LOG_ERROR, log_str);
     }
   }
@@ -196,6 +196,7 @@ int inotify_loop(int fd) {
 int main(void) {
 
   TIMETRACK_LOG = fopen(".TIMETRACKLOG", "a");
+  logging(LOG_INFO, "Timetrack session ended.");
 
   int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
   map = hashmap();
@@ -237,5 +238,6 @@ int main(void) {
     pthread_mutex_destroy(&tex);
   }
 
+  logging(LOG_INFO, "Timetrack session ended");
   return 0;
 }
