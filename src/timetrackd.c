@@ -1,5 +1,6 @@
 #include <asm-generic/errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <linux/limits.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -13,9 +14,15 @@
 
 #include "hashmap.h"
 
+// ---- Pipe Message Buffer ----
 #define BUF_SIZE 100
 #define FIFO_PATH "/tmp/timetrack"
 #define FIFO_MODE 0666
+// -------------------------------
+
+// ---- inotify event buffer ----
+#define EVENT_BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
+// -------------------------------
 
 struct Table *map;
 // global mutex lock
@@ -36,12 +43,12 @@ void logging(LOG_TYPE ltype, char *s, ...) {
   struct tm *tsinfo = localtime(&ts);
   char *proper_time = asctime(tsinfo);
 
-  int size = strlen(s);
+  int size = strlen(s) + 100;
   char log_buffer[size];
 
   va_list v;
   va_start(v, s);
-  int status = vsnprintf(log_buffer, 100, s, v);
+  int status = vsnprintf(log_buffer, size, s, v);
   va_end(v);
 
   if (0 > status)
@@ -140,6 +147,9 @@ int initialize_watchdog(void) {
 }
 
 // TODO: implement performing actions on the received events
+// INFO: `char *path` is the path of the folder being watched.
+// The name of the file where an event has occured is contained
+// in `event->name`
 int watchdog_act(struct inotify_event *event, char *path) {
   // --------
   // There are three inotify events are fundamental to timetrack
@@ -170,26 +180,34 @@ int watchdog_act(struct inotify_event *event, char *path) {
 }
 
 int inotify_loop(int fd) {
-  struct inotify_event ievnt;
+  char buffer[EVENT_BUF_LEN] __attribute__((aligned(8)));
+  char *p;
+  struct inotify_event *ievnt;
   // we allocate an additional 100 bytes because the size of
   // each inotify event is the size of the struct + the size of the name
   // field
   // See more: https://man7.org/linux/man-pages/man7/inotify.7.html
-
-  int event_size = sizeof(struct inotify_event) + 100;
-
   int n;
 
-  while ((n = read(fd, &ievnt, sizeof(struct inotify_event))) > 0) {
-    int wd = ievnt.wd;
-    pthread_mutex_lock(&tex);
-    char *pathname = hashmap_get(map, wd);
-    pthread_mutex_unlock(&tex);
+  while ((n = read(fd, buffer, EVENT_BUF_LEN))) {
+    // See more:
+    // https://man7.org/tlpi/code/online/dist/inotify/demo_inotify.c.html
+    for (p = buffer; p < buffer + n;) {
+      ievnt = (struct inotify_event *)p;
+      int wd = ievnt->wd;
+      if (EDEADLK == pthread_mutex_lock(&tex)) {
+        logging(LOG_ERROR, "Deadlock detected. Operation failed.");
+        return -1;
+      }
+      char *pathname = hashmap_get(map, wd);
+      pthread_mutex_unlock(&tex);
 
-    int status = watchdog_act(&ievnt, pathname);
+      int status = watchdog_act(ievnt, pathname);
 
-    if (0 > status)
-      logging(LOG_ERROR, "Watchdog didn't act. Status: %d", status);
+      if (0 > status)
+        logging(LOG_ERROR, "Watchdog didn't act. Status: %d", status);
+      p += sizeof(struct inotify_event) + ievnt->len;
+    }
   }
   return 0;
 }
@@ -197,7 +215,6 @@ int inotify_loop(int fd) {
 int main(void) {
 
   TIMETRACK_LOG = fopen(".TIMETRACKLOG", "a");
-  logging(LOG_INFO, "Timetrack session ended.");
 
   int wd_fd = initialize_watchdog(); // file_descriptor of the ipc pipe
   map = hashmap();
@@ -239,6 +256,5 @@ int main(void) {
     pthread_mutex_destroy(&tex);
   }
 
-  logging(LOG_INFO, "Timetrack session ended");
   return 0;
 }
