@@ -87,11 +87,12 @@ int handle_pipe_message(int fd, char *buf, int size) {
   path_name[path_size] = '\0';
 
   // notify when a file inside the watch repo is:
-  // 1. opened
-  // 2. closed write (file opened for WRITING was closed)
-  // 3. closed no write (file opened NOT for writing was closed)
-  // 4. deleted
-  uint32_t mask = IN_OPEN | IN_CLOSE | IN_DELETE;
+  // 1. created
+  // 2. opened
+  // 3. closed write (file opened for WRITING was closed)
+  // 4. closed no write (file opened NOT for writing was closed)
+  // 5. deleted
+  uint32_t mask = IN_CREATE | IN_OPEN | IN_CLOSE | IN_DELETE;
 
   if (type == 1) {
     int wd = inotify_add_watch(fd, path_name, mask);
@@ -177,7 +178,6 @@ int watchdog_act(struct inotify_event *event, char *path) {
   // Other events types that are, though as a supplement, still used are:
   // IN_CREATE
   // IN_DELETE
-  // IN_MODIFY
   // --------
   (void)event;
   (void)path;
