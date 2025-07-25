@@ -16,6 +16,8 @@ void insert_get() {
   int k_4 = 65571;
   char *v_4 = "Long";
 
+  int k_5 = 34;
+
   struct Table *map = hashmap();
 
   hashmap_insert(map, k_1, v_1);
@@ -27,11 +29,15 @@ void insert_get() {
   char *res2 = hashmap_get(map, k_2);
   char *res3 = hashmap_get(map, k_3);
   char *res4 = hashmap_get(map, k_4);
+  char *res5 = hashmap_get(map, k_5);
 
   assert(strcmp(res1, "Hello") == 0);
   assert(strcmp(res2, "How") == 0);
   assert(strcmp(res3, "When") == 0);
   assert(strcmp(res4, "Long") == 0);
+
+  assert(res5 == NULL);
+  printf("NULL\n");
 
   assert(strcmp(res2, "Hello") != 0);
 

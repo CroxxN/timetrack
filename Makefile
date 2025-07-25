@@ -9,7 +9,7 @@ release: ./src/timetrack.c
 	$(CC) ./src/timetrack.c $(CFLAGS) $(LIBS) -o timetrack
 
 daemon: ./src/timetrackd.c
-	$(CC) ./src/timetrackd.c $(CFLAGS)  -o timetrackd
+	$(CC) ./src/timetrackd.c $(CFLAGS) -o timetrackd
 
 # TODO: one test for all; use cli to indicate what to test
 test: ./tests/hashmap.c
