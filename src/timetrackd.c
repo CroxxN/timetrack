@@ -86,8 +86,12 @@ int handle_pipe_message(int fd, char *buf, int size) {
   strncpy(path_name, buf, path_size);
   path_name[path_size] = '\0';
 
-  // TODO: add masks
-  uint32_t mask = 0x0;
+  // notify when a file inside the watch repo is:
+  // 1. opened
+  // 2. closed write (file opened for WRITING was closed)
+  // 3. closed no write (file opened NOT for writing was closed)
+  // 4. deleted
+  uint32_t mask = IN_OPEN | IN_CLOSE | IN_DELETE;
 
   if (type == 1) {
     int wd = inotify_add_watch(fd, path_name, mask);
@@ -150,6 +154,7 @@ int initialize_watchdog(void) {
 // INFO: `char *path` is the path of the folder being watched.
 // The name of the file where an event has occured is contained
 // in `event->name`
+// SEE MORE: https://man7.org/linux/man-pages/man7/inotify.7.html
 int watchdog_act(struct inotify_event *event, char *path) {
   // --------
   // There are three inotify events are fundamental to timetrack
