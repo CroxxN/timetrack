@@ -91,8 +91,8 @@ int initialize(FILE *file, char *repo_name) {
   return 0;
 }
 
-int stamp_db(DB *dbase, char *process_name, struct tm start_time,
-             struct tm end_time) {
+int stamp_event(DB *dbase, char *process_name, struct tm start_time,
+                struct tm end_time) {
   if (NULL == process_name)
     return -1;
 
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
   struct tm local_start_tm = *localtime(&start_time);
   struct tm local_end_tm = *localtime(&end_time);
 
-  stamp_db(&database, argv[1], local_start_tm, local_end_tm);
+  stamp_event(&database, argv[1], local_start_tm, local_end_tm);
 
   printf("Execution time: %ld seconds\n", end_time - start_time);
 
