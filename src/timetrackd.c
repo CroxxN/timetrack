@@ -68,6 +68,17 @@ void logging(LOG_TYPE ltype, char *s, ...) {
   return;
 }
 
+// from the path name of a directory:
+// 1. recursively walk the directory
+// 2. if not gitignored, add it to inotify watch list
+int walk_dir_add(int fd, char *path_name, int mask) {
+  // for each directories in path name:
+  //   if not .gitignored
+  //     wd = inotify_add_watch(fd, path_name, mask);
+  // return wd or error
+  return 0;
+}
+
 int handle_pipe_message(int fd, char *buf, int size) {
   unsigned char type = buf[0];
   if (type < 0 || type > 1)
