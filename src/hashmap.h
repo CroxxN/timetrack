@@ -73,7 +73,15 @@ int hashmap_insert(struct Table *table, uint32_t key, char *value) {
 
   if (NULL != (table->inner[index])) {
     struct Node *iter = table->inner[index];
+    if (iter->key == key) {
+      iter->val = value;
+      return 0;
+    }
     while (iter->next) {
+      if (iter->key == key) {
+        iter->val = value;
+        return 0;
+      }
       iter = iter->next;
     }
     iter->next = temp;

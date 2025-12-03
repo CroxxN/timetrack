@@ -21,30 +21,36 @@ void insert_get() {
   struct Table *map = hashmap();
 
   hashmap_insert(map, k_1, v_1);
-  hashmap_insert(map, k_2, v_2);
-  hashmap_insert(map, k_3, v_3);
-  hashmap_insert(map, k_4, v_4);
-
   char *res1 = hashmap_get(map, k_1);
+
+  hashmap_insert(map, k_2, v_2);
   char *res2 = hashmap_get(map, k_2);
+
+  hashmap_insert(map, k_3, v_3);
   char *res3 = hashmap_get(map, k_3);
+
+  hashmap_insert(map, k_4, v_4);
   char *res4 = hashmap_get(map, k_4);
+
+  hashmap_insert(map, k_1, v_4);
+  char *res6 = hashmap_get(map, k_1);
+
   char *res5 = hashmap_get(map, k_5);
 
   assert(strcmp(res1, "Hello") == 0);
   assert(strcmp(res2, "How") == 0);
   assert(strcmp(res3, "When") == 0);
   assert(strcmp(res4, "Long") == 0);
-
   assert(res5 == NULL);
-  printf("NULL\n");
-
   assert(strcmp(res2, "Hello") != 0);
+  assert(strcmp(res6, "Long") == 0);
 
-  printf("%s\n", res1);
-  printf("%s\n", res2);
-  printf("%s\n", res3);
-  printf("%s\n", res4);
+  printf("res1: %s\n", res1);
+  printf("res2: %s\n", res2);
+  printf("res3: %s\n", res3);
+  printf("res4: %s\n", res4);
+  printf("res5: NULL\n");
+  printf("res6: %s\n", res6);
 
   return;
 }
